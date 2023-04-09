@@ -5,7 +5,7 @@ In order to reproduce the results, follow the instructions for each of the binar
 
 **Data processing:**
 - Read in the two text files with the read.table() function with header = TRUE. I set each of these equal to training_data and test_data respectively. 
-- For each classification task, I separated the training data into a subset of the predictors and the response. This is done by making a new data set (I named training_data.X) that is equal to the training_data without the first two columns (subject and activity).
+- For each classification task, I separated the training data into a subset of the predictors and the response. This is done by making a new data set (I named training_data.X) that is equal to the training_data without the first two columns (subject and activity). This also formats the training data in the same format that the test data is in. 
 
 ```
 training_data.X = training_data[-c(2,ncol(training_data))]
@@ -29,6 +29,13 @@ svmfit_rad = svm(as.factor(training_data.Y) ~ .,
         kernel = "radial", 
         scale = FALSE, 
         cost = 10)
+```
+
+- In order to visualize the results, predict the results for the test data. This is done with the code below. 
+
+```
+svm.pred_rad = predict(svmfit_rad, test_data,
+                   decision.values = T)
 ```
 
 **Multiple Classification:**
