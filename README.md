@@ -39,3 +39,12 @@ svm.pred_rad = predict(svmfit_rad, test_data,
 ```
 
 **Multiple Classification:**
+- Just as the response for binary classification was created, we do the same thing for multi class classification here. We will create a new response variable (I named training_data.Y2) that keeps the activity value provided except for static postural changes. This is done so below.
+
+```
+training_data.Y2 = training_data$activity
+  
+training_data.Y2 = ifelse(training_data.Y2 == 7 | training_data.Y2 == 8 | training_data.Y2 == 9 |training_data.Y2 == 10 | training_data.Y2 == 11 | training_data.Y2 == 12, 7, training_data.Y2)
+```
+
+- 
