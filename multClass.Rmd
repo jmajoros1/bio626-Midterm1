@@ -1,0 +1,103 @@
+---
+title: "multClass626"
+author: "jmajoros"
+date: '2023-04-09'
+output: html_document
+---
+
+```{r}
+library(glmnet)
+library(ggplot2)
+library(MASS)
+library(e1071)
+library(kernlab)
+require(ISLR)
+attach(Caravan)
+library(rpart)
+library(neuralnet)
+library(nnet)
+library(keras)
+```
+
+```{r}
+test_data = read.table("test_data.txt", header = TRUE)
+training_data = read.table("training_data.txt", header = TRUE)
+```
+
+Build a refined multi-class classifier to classify walking (1), walking_upstairs (2), walking_downstairs (3), sitting (4), standing (5), lying (6), and static postural transition (7)
+
+```{r}
+training_data.X2 = training_data[-c(2,ncol(training_data))]
+#create y2 of multi classes 
+# 7 - 12 of activity is 7 - static postural position
+training_data.Y2 = training_data$activity
+
+training_data.Y2 = ifelse(training_data.Y2 == 7 | training_data.Y2 == 8 | training_data.Y2 == 9 |training_data.Y2 == 10 | training_data.Y2 == 11 | training_data.Y2 == 12, 7, training_data.Y2)
+
+#training_data.Y2
+```
+
+--------------------------------------------------------------------------------------------------------------------------
+
+### TRY RANDOM FOREST
+
+```{r}
+multi_rf = rpart(training_data.Y2 ~ ., data = training_data.X2, method = "class")
+```
+
+```{r}
+print(multi_rf, digits = 3)
+```
+
+```{r}
+pred2 = predict(multi_rf, test_data, type = "class")
+
+pred2_train = predict(multi_rf, training_data.X2, type = "class")
+table(pred2_train, training_data.Y2)
+```
+
+```{r}
+pred2 = as.numeric(as.character(pred2))
+write.table(pred2, "multiclass_86872.txt", append = FALSE, sep = " ", dec = ".",
+            row.names = FALSE, col.names = FALSE)
+```
+
+--------------------------------------------------------------------------------------------------------------------------
+
+### TRY SVM 
+
+```{r}
+#try svm with multi-class
+svm_fit_multi = svm(as.factor(training_data.Y2) ~ ., 
+        data = training_data.X2, 
+        kernel = "radial", 
+        scale = FALSE, 
+        method = "C-classification",
+        cost = 10)
+print(svm_fit_multi)
+```
+
+```{r}
+svm.pred_multi = predict(svm_fit_multi, test_data,
+                   decision.values = T)
+
+svm.pred_multi_train = predict(svm_fit_multi, training_data.X2,
+                   decision.values = T)
+table(svm.pred_multi_train, training_data.Y2)
+```
+
+--------------------------------------------------------------------------------------------------------------------------
+
+WRITE TO A TXT FILE IN A SINGLE COLUMN
+
+```{r}
+svm.pred_multi = as.data.frame(svm.pred_multi)
+svm.pred_multi$svm.pred_multi = as.numeric(as.character((svm.pred_multi$svm.pred_multi)))
+write.table(svm.pred_multi, "multiclass_86872.txt", append = FALSE, sep = " ", dec = ".",
+            row.names = FALSE, col.names = FALSE)
+```
+
+
+
+
+

@@ -1,0 +1,204 @@
+---
+title: "binClass626"
+author: "jmajoros"
+date: '2023-04-09'
+output: html_document
+---
+
+```{r}
+library(glmnet)
+library(ggplot2)
+library(MASS)
+library(e1071)
+library(kernlab)
+require(ISLR)
+attach(Caravan)
+library(rpart)
+```
+
+```{r}
+test_data = read.table("test_data.txt", header = TRUE)
+training_data = read.table("training_data.txt", header = TRUE)
+```
+
+```{r}
+training_data.X = training_data[-c(2,ncol(training_data))]
+training_data.Y = ifelse(training_data$activity == 1 | training_data$activity == 2 | training_data$activity == 3, 1, 0)
+```
+
+--------------------------------------------------------------------------------------------------------------------------
+
+```{r}
+# REGULAR LOG REGRESSION HAS AN ISSUE WITH CONVERGING - PERFECT SEPARATION
+
+bin_class = glm(training_data.Y ~ ., 
+    family = binomial, 
+    data = training_data.X)
+
+#summary(bin_class)
+```
+
+```{r}
+#log.probs1 = predict(bin_class, test_sub[-c(2,ncol(train_sub))], type="response")
+#log.pred1 = rep(0, dim(test_sub)[1])
+#log.pred1[log.probs1 > 0.5] = 1
+
+#table(log.pred1, test_sub$s_vs_d)
+#lr_te = mean(log.pred1 == test_sub$s_vs_d)
+```
+
+--------------------------------------------------------------------------------------------------------------------------
+
+```{r}
+library(glmnet)
+set.seed(626)
+#try to find the ideal lambda for lasso penalized regression 
+#cv.lasso <- cv.glmnet(as.matrix(training_data[, -ncol(training_data)]), training_data$s_vs_d, 
+       #family = "binomial", 
+       #alpha = 1, 
+       #lambda = NULL)
+#plot(cv.lasso)
+```
+
+
+```{r}
+#cv.lasso$lambda.min
+#coef(cv.lasso, cv.lasso$lambda.min)
+```
+
+```{r}
+#sample <- sample(c(TRUE, FALSE), nrow(training_data), replace=TRUE, prob=c(0.7,0.3))
+#train_sub  <- training_data[sample, ]
+#test_sub   <- training_data[!sample, ]
+```
+
+```{r, testing_sub}
+#lasso_mod_test = glmnet(train_sub[-c(2,ncol(train_sub))], train_sub$s_vs_d, 
+       #family = "binomial", 
+       #alpha = 1, 
+       #lambda = cv.lasso$lambda.min)
+```
+
+```{r, test2}
+#log.probs_test = predict(lasso_mod_test, as.matrix(test_sub[-c(2,ncol(train_sub))]), type="response")
+```
+
+```{r, test3}
+#log.pred_test = rep(0, dim(test_sub)[1])
+#log.pred_test[log.probs_test > 0.5] = 1
+
+#table(log.pred_test, test_sub$s_vs_d)
+#lr_te = mean(log.pred_test == test_sub$s_vs_d)
+```
+
+```{r}
+#lasso_mod = glmnet(training_data[-c(2,ncol(training_data))], training_data$s_vs_d, 
+       #family = "binomial", 
+       #alpha = 1, 
+       #lambda = cv.lasso$lambda.min)
+```
+
+```{r}
+#log.probs = predict(lasso_mod, as.matrix(test_data), type="response")
+```
+
+```{r}
+#log.pred = rep(0, dim(test_data)[1])
+#log.pred[log.probs > 0.5] = 1
+```
+
+--------------------------------------------------------------------------------------------------------------------------
+
+### TRY AN SVM
+
+```{r}
+training_data.X = training_data[-c(2,ncol(training_data))]
+training_data.Y = ifelse(training_data$activity == 1 | training_data$activity == 2 | training_data$activity == 3, 1, 0)
+```
+
+```{r}
+svmfit_rad = svm(as.factor(training_data.Y) ~ ., 
+        data = training_data.X, 
+        kernel = "radial", 
+        scale = FALSE, 
+        cost = 10)
+print(svmfit_rad)
+```
+
+```{r}
+svm.pred_rad1 = predict(svmfit_rad, training_data.X,
+                   decision.values = T)
+
+svm.pred_rad = predict(svmfit_rad, test_data,
+                   decision.values = T)
+```
+
+--------------------------------------------------------------------------------------------------------------------------
+
+### try the committee methods - take the common choice of multiple methods
+
+LOG REGRESSION
+```{r}
+fit1_log = glm(training_data.Y ~., 
+               data = training_data.X, 
+               family = binomial)
+```
+
+```{r}
+fit1_prob1 = predict(fit1_log, training_data.X, type = "response")
+fit1_pred1 = rep(0, dim(training_data.X)[1])
+fit1_pred1[fit1_prob1 > 0.5] = 1
+
+fit1_prob = predict(fit1_log, test_data, type = "response")
+fit1_pred = rep(0, dim(test_data)[1])
+fit1_pred[fit1_prob > 0.5] = 1
+```
+
+LDA
+```{r}
+fit2_lda = lda(training_data.Y ~ ., 
+               data = training_data.X)
+fit2_pred1 = predict(fit2_lda, training_data.X)$class
+fit2_pred = predict(fit2_lda, test_data)$class
+fit2_pred = as.numeric(unlist(fit2_pred)) - 1
+```
+
+the svm model is svm.pred_rad
+
+VOTE
+```{r}
+vote_vec = fit1_pred + fit2_pred + svm.pred_rad
+ensemble.pred = rep(0, length(vote_vec))
+ensemble.pred[vote_vec >= 2] = 1
+ensemble.pred = ifelse(is.na(ensemble.pred), 0, 1)
+ensemble.pred
+```
+
+```{r}
+#make tables for all based on the training error
+
+#log regression
+table(fit1_pred1, training_data.Y)
+#lda
+table(fit2_pred1, training_data.Y)
+#svm
+table(svm.pred_rad1, training_data.Y)
+```
+
+
+WRITE TO A TXT FILE IN A SINGLE COLUMN
+
+```{r}
+write.table(ensemble.pred, "binary_86872.txt", append = FALSE, sep = " ", dec = ".",
+            row.names = FALSE, col.names = FALSE)
+```
+
+
+```{r}
+#THIS GETS 0.999 ACCURACY - IF THE ENSEMBLE DOESN'T WORK - REVERT BACK TO THIS
+svm.pred_rad = as.data.frame(svm.pred_rad)
+svm.pred_rad$svm.pred_rad = as.numeric(as.character((svm.pred_rad$svm.pred_rad)))
+write.table(svm.pred_rad, "binary_86872.txt", append = FALSE, sep = " ", dec = ".",
+            row.names = FALSE, col.names = FALSE)
+```
+
